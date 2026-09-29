@@ -4,6 +4,8 @@ variable "aws_region" {
   default = "us-east-1"
 }
 
+# Prefix used in resource names and tags (for example "cloud-assignment-vpc"),
+# so our resources are easy to find in the AWS console.
 variable "project_name" {
   type    = string
   default = "cloud-assignment"
