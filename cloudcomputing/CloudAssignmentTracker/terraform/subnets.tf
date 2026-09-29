@@ -29,3 +29,14 @@ resource "aws_subnet" "private_db" {
     Name = "cloud-assignment-private-db-subnet"
   }
 }
+
+# Second private subnet for the database in another Availability Zone
+resource "aws_subnet" "private_db_b" {
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = "10.0.4.0/24"
+  availability_zone = "us-east-1b"
+
+  tags = {
+    Name = "cloud-assignment-private-db-subnet-b"
+  }
+}

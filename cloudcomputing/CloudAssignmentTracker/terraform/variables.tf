@@ -11,3 +11,18 @@ variable "project_name" {
   default = "cloud-assignment"
 }
 
+variable "db_name" {
+  type    = string
+  default = "cloudassignmenttracker"
+}
+
+variable "db_username" {
+  type    = string
+  default = "appuser"
+}
+
+variable "db_password" {
+  type      = string
+  sensitive = true
+}
+
