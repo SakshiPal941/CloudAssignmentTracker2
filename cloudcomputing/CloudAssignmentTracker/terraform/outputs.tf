@@ -1,1 +1,4 @@
-# Displays useful information about our deployed infrastructure, such as EC2 IP addresses and RDS endpoints
+output "rds_endpoint" {
+  description = "Endpoint of the RDS PostgreSQL database"
+  value       = aws_db_instance.postgres.endpoint
+}

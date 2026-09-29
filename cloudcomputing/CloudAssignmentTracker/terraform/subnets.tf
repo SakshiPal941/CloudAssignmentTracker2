@@ -22,14 +22,14 @@ resource "aws_subnet" "private_app" {
 
 # Private subnet for the database
 resource "aws_subnet" "private_db" {
-  vpc_id     = aws_vpc.main.id
-  cidr_block = "10.0.3.0/24"
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = "10.0.3.0/24"
+  availability_zone_id = "use1-az1"
 
   tags = {
     Name = "cloud-assignment-private-db-subnet"
   }
 }
-
 # Second private subnet for the database in another Availability Zone
 resource "aws_subnet" "private_db_b" {
   vpc_id            = aws_vpc.main.id
