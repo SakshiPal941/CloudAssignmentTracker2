@@ -1,0 +1,1 @@
+# Defines the settings used to  configure our AWS infrastructure, such as the region and instance type
