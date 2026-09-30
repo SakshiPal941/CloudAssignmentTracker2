@@ -16,32 +16,70 @@ resource "aws_instance" "api" {
 
   subnet_id = aws_subnet.private_app.id
 
+  # Fixed private IP so the frontend's Nginx proxy target stays the same
+  # when the backend is rebuilt
+  private_ip = "10.0.2.10"
+
   vpc_security_group_ids = [
     aws_security_group.api.id
   ]
 
+  user_data_replace_on_change = true
+
   user_data = <<-EOF
     #!/bin/bash
+    # Send all output to a log file and the EC2 system log for troubleshooting
+    exec > >(tee /var/log/user-data.log | logger -t user-data -s 2>/dev/console) 2>&1
+    set -eux
 
-    apt-get update
-    apt-get install -y git openjdk-17-jdk
+    export HOME=/root
+    export DEBIAN_FRONTEND=noninteractive
 
-    cd /opt
+    # Add swap so the Maven build doesn't run out of memory on a t2.micro
+    fallocate -l 1G /swapfile
+    chmod 600 /swapfile
+    mkswap /swapfile
+    swapon /swapfile
 
-    git clone https://github.com/SakshiPal941/CloudAssignmentTracker2.git
+    # Wait for Ubuntu's automatic updates to release the apt lock
+    apt-get -o DPkg::Lock::Timeout=300 update
+    apt-get -o DPkg::Lock::Timeout=300 install -y git openjdk-17-jdk
 
+    # Clone and build the backend
+    git clone https://github.com/SakshiPal941/CloudAssignmentTracker2.git /opt/CloudAssignmentTracker2
     cd /opt/CloudAssignmentTracker2/cloudcomputing/CloudAssignmentTracker/Backend
-
     chmod +x mvnw
+    ./mvnw -B clean package -DskipTests
+    cp target/*.jar /opt/assignment-tracker.jar
 
-    export DB_HOST="${aws_db_instance.postgres.address}"
-    export DB_NAME="${var.db_name}"
-    export DB_USERNAME="${var.db_username}"
-    export DB_PASSWORD="${var.db_password}"
+    # Database settings, readable only by root
+    cat > /etc/assignment-tracker.env <<'ENV'
+    DB_HOST=${aws_db_instance.postgres.address}
+    DB_NAME=${var.db_name}
+    DB_USERNAME=${var.db_username}
+    DB_PASSWORD=${var.db_password}
+    ENV
+    chmod 600 /etc/assignment-tracker.env
 
-    ./mvnw clean package -DskipTests
+    # Run the backend as a service so it starts again after a reboot
+    cat > /etc/systemd/system/assignment-tracker.service <<'UNIT'
+    [Unit]
+    Description=Assignment Tracker backend
+    After=network-online.target
+    Wants=network-online.target
 
-    nohup java -jar target/*.jar > /var/log/assignment-tracker.log 2>&1 &
+    [Service]
+    EnvironmentFile=/etc/assignment-tracker.env
+    ExecStart=/usr/bin/java -jar /opt/assignment-tracker.jar
+    Restart=always
+    RestartSec=10
+
+    [Install]
+    WantedBy=multi-user.target
+    UNIT
+
+    systemctl daemon-reload
+    systemctl enable --now assignment-tracker
   EOF
 
   tags = {
