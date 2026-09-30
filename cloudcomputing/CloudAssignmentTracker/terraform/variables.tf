@@ -24,5 +24,11 @@ variable "db_username" {
 variable "db_password" {
   type      = string
   sensitive = true
+
+  # RDS rejects passwords shorter than 8 characters or containing / @ " or spaces
+  validation {
+    condition     = length(var.db_password) >= 8 && !can(regex("[/@\" ]", var.db_password))
+    error_message = "db_password must be at least 8 characters and must not contain /, @, \" or spaces."
+  }
 }
 
