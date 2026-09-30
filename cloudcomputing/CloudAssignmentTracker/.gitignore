@@ -61,3 +61,7 @@ build/
 .terraform.lock.hcl
 *.tfstate.*
 *.tfvars
+
+
+### SSH keys (Assignment 1 Vagrant tunnel) ###
+tunnel_keys/
