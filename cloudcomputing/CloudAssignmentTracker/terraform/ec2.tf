@@ -60,6 +60,7 @@ resource "aws_instance" "api" {
     DB_NAME=${var.db_name}
     DB_USERNAME=${var.db_username}
     DB_PASSWORD=${var.db_password}
+    SNS_TOPIC_ARN=${aws_sns_topic.assignment_notifications.arn}
     ENV
     chmod 600 /etc/assignment-tracker.env
 
