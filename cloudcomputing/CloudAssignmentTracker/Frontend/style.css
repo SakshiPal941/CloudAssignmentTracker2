@@ -113,7 +113,7 @@ form { display: flex; flex-direction: column; gap: 26px; padding: 30px 2px 8px; 
 
 /* notification box */
 .notification-bar {
-  margin: -8px 0 18px auto;
+  margin: -8px auto 18px;
   width: fit-content;
   max-width: 100%;
   padding: 10px 12px;
