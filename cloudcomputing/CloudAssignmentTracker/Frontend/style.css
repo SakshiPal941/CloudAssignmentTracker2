@@ -113,9 +113,9 @@ form { display: flex; flex-direction: column; gap: 26px; padding: 30px 2px 8px; 
 
 /* notification box */
 .notification-bar {
-  margin: -8px auto 18px;
-  width: fit-content;
-  max-width: 100%;
+  margin: 14px auto 0;
+  width: 560px;
+  box-sizing: border-box;
   padding: 10px 12px;
   border: 1px solid oklch(0.89 0.045 350);
   border-radius: 12px;
