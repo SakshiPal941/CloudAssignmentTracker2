@@ -37,6 +37,22 @@ async function apiDelete(id) {
   if (!res.ok && res.status !== 204) throw new Error("DELETE failed: " + res.status);
 }
 
+async function apiSubscribeToNotifications(email) {
+  const res = await fetch("/api/notifications/subscribe", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email })
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.message || "Subscription failed");
+  }
+
+  return data;
+}
+
 async function loadAssignments() {
   try {
     items = await apiGet();
@@ -209,3 +225,38 @@ form.addEventListener("submit", async (e) => {
 $("#cancel").addEventListener("click", () => { tab = "all"; editingId = null; render(); });
 
 loadAssignments();
+
+const notificationForm = $("#notification-form");
+const notificationEmail = $("#notification-email");
+const notificationMessage = $("#notification-message");
+
+if (notificationForm) {
+  notificationForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const email = notificationEmail.value.trim();
+    const button = notificationForm.querySelector("button");
+
+    if (!email) return;
+
+    button.disabled = true;
+    button.textContent = "Subscribing...";
+    notificationMessage.textContent = "";
+
+    try {
+      const data = await apiSubscribeToNotifications(email);
+
+      notificationMessage.textContent = data.message;
+      notificationEmail.value = "";
+      notificationForm.style.display = "none";
+
+    } catch (err) {
+      console.error("Notification subscription failed:", err);
+      notificationMessage.textContent =
+        err.message || "Could not subscribe to notifications.";
+    } finally {
+      button.disabled = false;
+      button.textContent = "Notify me";
+    }
+  });
+}
