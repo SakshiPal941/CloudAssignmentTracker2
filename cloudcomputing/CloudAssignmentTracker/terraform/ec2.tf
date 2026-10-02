@@ -14,6 +14,8 @@ resource "aws_instance" "api" {
   ami           = data.aws_ami.ubuntu.id
   instance_type = "t2.micro"
 
+  iam_instance_profile = "LabInstanceProfile"
+
   subnet_id = aws_subnet.private_app.id
 
   # Fixed private IP so the frontend's Nginx proxy target stays the same
