@@ -60,30 +60,32 @@
                         <button type="button" class="cancel" id="cancel">Cancel</button>
                     </div>
                 </form>
+
+                <!-- Email reminder signup (sent through Amazon SNS) -->
+                <div class="notification-bar" id="notification-bar">
+                    <div class="notification-content">
+                        <div class="notification-text">
+                            <strong>Want reminders?</strong>
+                            <span>Email me the day before an assignment is due.</span>
+                        </div>
+
+                        <form id="notification-form" class="notification-form">
+                            <input
+                                type="email"
+                                id="notification-email"
+                                placeholder="your@email.com"
+                                autocomplete="email"
+                                required
+                            >
+                            <button type="submit">Notify me</button>
+                        </form>
+                    </div>
+
+                    <div class="notification-message" id="notification-message"></div>
+                </div>
             </div>
         </div>
     </div>
-                    <div class="notification-bar" id="notification-bar">
-    <div class="notification-content">
-        <div>
-            <strong>Want reminders?</strong>
-            <span>Get an email when an assignment is due tomorrow.</span>
-        </div>
-
-        <form id="notification-form" class="notification-form">
-            <input
-                type="email"
-                id="notification-email"
-                placeholder="your@email.com"
-                autocomplete="email"
-                required
-            >
-            <button type="submit">Notify me</button>
-        </form>
-    </div>
-
-    <div class="notification-message" id="notification-message"></div>
-</div>
 
     <script src="app.js"></script>
 </body>
