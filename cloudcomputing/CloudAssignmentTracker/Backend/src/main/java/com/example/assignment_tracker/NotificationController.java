@@ -42,12 +42,14 @@ public class NotificationController {
                     Map.of(MESSAGE, "This email is already subscribed."));
         }
 
+        // Subscribe in SNS first, so a failed SNS call doesn't leave the
+        // email saved as "already subscribed" when it isn't
+        notificationService.subscribeEmail(email);
+
         NotificationSubscriber subscriber =
                 new NotificationSubscriber(email);
 
         subscriberRepository.save(subscriber);
-
-        notificationService.subscribeEmail(email);
 
         return ResponseEntity.ok(
                 Map.of(

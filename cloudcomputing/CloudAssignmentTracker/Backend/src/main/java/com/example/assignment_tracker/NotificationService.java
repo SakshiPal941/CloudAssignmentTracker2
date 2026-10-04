@@ -1,5 +1,8 @@
 package com.example.assignment_tracker;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -27,8 +30,11 @@ public class NotificationService {
 
     public void sendDeadlineReminder(Assignment assignment) {
 
+        LocalDate today = LocalDate.now(ZoneId.of("Pacific/Auckland"));
+        String when = assignment.getDueDate().equals(today) ? "today" : "tomorrow";
+
         String message = "Reminder: " + assignment.getTitle()
-                + " is due tomorrow (" + assignment.getDueDate() + ").";
+                + " is due " + when + " (" + assignment.getDueDate() + ").";
 
         PublishRequest request = PublishRequest.builder()
                 .topicArn(topicArn)
