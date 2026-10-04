@@ -60,7 +60,7 @@ async function loadAssignments() {
     render();
   } catch (err) {
     console.error("FETCH FAILED:", err);
-    list.innerHTML = '<div class="empty">Could not reach the backend. Check that all 3 VMs are running.</div>';
+    list.innerHTML = '<div class="empty">Could not load assignments right now. The server may still be starting up, so please try again in a few minutes.</div>';
   }
 }
 
