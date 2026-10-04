@@ -2,6 +2,8 @@ package com.example.assignment_tracker;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -32,12 +34,29 @@ public class NotificationService {
 
         LocalDate today = LocalDate.now(ZoneId.of("Pacific/Auckland"));
         String when = assignment.getDueDate().equals(today) ? "today" : "tomorrow";
+        String dueDate = assignment.getDueDate()
+                .format(DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.ENGLISH));
 
-        String message = "Reminder: " + assignment.getTitle()
-                + " is due " + when + " (" + assignment.getDueDate() + ").";
+        String course = assignment.getDescription();
+        String courseLine = (course == null || course.isBlank()) ? "" : "Course: " + course + "\n";
+
+        String message = "Hi there,\n\n"
+                + "Just a reminder that \"" + assignment.getTitle() + "\" is due " + when + ".\n\n"
+                + courseLine
+                + "Due: " + dueDate + "\n\n"
+                + "Good luck!\n"
+                + "Assignment Tracker";
+
+        // SNS subjects must be plain ASCII and at most 100 characters
+        String subject = ("Due " + when + ": " + assignment.getTitle())
+                .replaceAll("[^\\x20-\\x7E]", "");
+        if (subject.length() > 100) {
+            subject = subject.substring(0, 97) + "...";
+        }
 
         PublishRequest request = PublishRequest.builder()
                 .topicArn(topicArn)
+                .subject(subject)
                 .message(message)
                 .build();
 
