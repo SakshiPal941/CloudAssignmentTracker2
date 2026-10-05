@@ -9,6 +9,7 @@ A web application for tracking university assignments and their due dates, with 
 - **Infrastructure**: Terraform, deployed to AWS `us-east-1`
 
 ## Architecture
+The application is deployed using a VPC with separate public and private subnets. The frontend runs on a public EC2 instance and is accessed through the Internet. Nginx serves the frontend and proxies api requests to the backend. The backend runs on a private EC2 instance and connects to a private PostgreSQL database hosted on Amazon RDS. A NAT Gateway allows the backend to make outbound Internet connections without giving it a public IP address. Amazon SNS is used to send email reminders to confirmed subscribers.
 
 
 ## Features
@@ -39,24 +40,52 @@ The project lives in `cloudcomputing/CloudAssignmentTracker/`. All paths and com
 | `setup-database.sql` | Optional sample data for a local database |
 
 ## Deploying to AWS
-
 ### Prerequisites
-
+1. An AWS account with access to the required AWS services. AWS Academy Learner Lab was used for this project.
+2. AWS CLI installed and configured with the credentials provided by the Learner Lab.
+3. Terraform installed.
+4. Git installed.
+5. The repository cloned locally.
 
 
 ### Steps
+1. Start the AWS Academy Learner Lab and copy the AWS CLI credentials into the terminal.
+2. Open a terminal in the Terraform folder:
+3. cd cloudcomputing\CloudAssignmentTracker\terraform
+4. Initialise Terraform: terraform init
+5. Review the resources that Terraform will create: terraform plan
+6. Deploy the infrastructure: terraform apply
+7. Type yes when Terraform asks for confirmation.
+8. Once deployment has finished, Terraform outputs the public IP address of the frontend. Open this address in a web browser to access the application.
+
+The Terraform deployment creates the VPC, subnets, route tables, Internet Gateway, NAT Gateway, security groups, EC2 instances, RDS database and SNS topic in AWS. The EC2 user-data scripts then install the required software and start the application.
 
 
 ### Redeploying after a code change
+The EC2 instances clone the repository when they are created. After making and pushing a code change, replace the relevant EC2 instance so that its startup script runs again and downloads the latest version:
 
+terraform apply -replace="aws_instance.frontend" -replace="aws_instance.api"
+
+If only the backend or frontend has changed, only the relevant instance needs to be replaced.
 
 
 ### Verifying the deployment
 
+After deployment, the frontend can be checked by opening the public IP address in a browser. The deployment can also be checked using the provided script:
+./scripts/check-deployment.sh
+The script checks that the deployed application is responding correctly.
+
+The API can also be tested directly using the frontend IP:
+http://<frontend-public-ip>/api/assignments
+
+This should return the assignments from the RDS database.
 
 ### Tearing down
+To remove the AWS deployment, run terraform destroy from the terraform folder.
 
+Then review the resources Terraform plans to remove and type yes to confirm.
 
+This removes the infrastructure created by Terraform, including the EC2 instances, RDS instance, NAT Gateway, Elastic IP and networking resources. The current RDS configuration uses skip_final_snapshot = true, so destroying the RDS instance will also remove its database data unless it has been backed up separately first.
 
 ## Running the backend locally
 
@@ -135,8 +164,23 @@ Subscribe body:
 ```
 
 ## Troubleshooting
+###Terraform cannot authenticate with AWS.
+Make sure the AWS Academy Learner Lab is running and that the temporary AWS credentials from the Learner Lab have been added to the terminal. These credentials expire, so they may need to be replaced when starting a new lab session.
+
+###The frontend does not load after terraform apply.
+Check the public IP output by Terraform and make sure the frontend EC2 instance has finished running its startup script. The script installs Nginx and copies the frontend files into the Nginx web directory, so the instance may take a few minutes before the application is available.
+
+###The backend is not responding.
+Check that the backend EC2 instance has finished its startup process and that the API is running on port 8080. The backend is in a private subnet, so it cannot be accessed directly from the Internet. Requests should go through the frontend Nginx proxy using /api/.
+
+###The backend cannot connect to AWS services or download packages during startup.
+Check that the NAT Gateway is running and that the private application subnet is associated with the private route table. The backend uses the NAT Gateway for outbound Internet access while remaining private.
+
 
 ### Deployment
+The application is deployed to AWS using Terraform. Running terraform apply creates the required AWS infrastructure, including the EC2 instances, RDS database, networking and SNS topic. The EC2 startup scripts then install the required software, download the latest code from the GitHub repository and start the application.
+
+After deployment is complete, Terraform outputs the public IP address of the frontend EC2 instance. The application can then be accessed by entering this IP address into a web browser.
 
 
 ### App
