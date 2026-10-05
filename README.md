@@ -1,143 +1,152 @@
-# CloudAssignmentTracker
+# Cloud Assignment Tracker
 
-A three-tier web application for tracking university assignments, built for COSC349 (Cloud Computing Architecture) Assignment 1. It demonstrates a working frontend → backend → database deployment across three separate VMs, completed with Vagrant and VirtualBox.
- 
-The stack: a plain HTML/JS frontend served by **Nginx**, a **Spring Boot** (Java) REST backend, and a **PostgreSQL** database, each running on its own VM.
+A web application for tracking university assignments and their due dates, with email reminders before each deadline when user subscribes.
 
-## 1. Repository Structure
+- **Frontend**: plain HTML, CSS and JavaScript, served by Nginx
+- **Backend**: Spring Boot (Java 17) REST API
+- **Database**: PostgreSQL on Amazon RDS
+- **Reminders**: Amazon SNS email notifications
+- **Infrastructure**: Terraform, deployed to AWS `us-east-1`
 
-- `CloudAssignmentTracker/` (the root - run all vagrant commands from here)
-  - `Vagrantfile` - sets up and configures all three VMs
-  - `setup-database.sql` - creates the table and adds seed data
-  - `test-website.conf` - Nginx config (serves files + proxies `/api/`)
-  - `tunnel_keys/` - SSH key used by backend to reach the database
-    - `id_ed25519`, `id_ed25519.pub`
-  - `Frontend/`
-    - `index.html`, `style.css`
-    - `app.js` - all UI logic, talks to the backend via `/api/`
-  - `Backend/`
-    - `pom.xml`, `mvnw` / `mvnw.cmd`
-    - `src/main/java/.../assignment_tracker/`
-      - `AssignmentTrackerApplication.java` - starts the Spring Boot app
-      - `Assignment.java` - maps to the `assignments` table
-      - `AssignmentRepository.java` - communicates to the database
-      - `AssignmentService.java` - business logic
-      - `AssignmentController.java` - the API endpoints (`/api/assignments`)
-     
+## Architecture
 
-  **Where to make changes:**
- 
-| Change | File |
+
+## Features
+
+- Add, edit, complete and delete assignments. The list is sorted by due date.
+- Each assignment has a title, a description, a due date and a status (`PENDING`, `IN_PROGRESS` or `COMPLETED`).
+- Email reminders for upcoming deadlines.
+
+### How reminders work
+
+1. Enter an email address in the reminder signup inside the tracker card.
+2. AWS sends a confirmation email to that address. No reminders arrive until the link in it is clicked.
+3. Every day at 9:00am New Zealand time, the backend sends a reminder for each assignment due the next day.
+4. An assignment added with a due date of today or tomorrow sends its reminder straight away, because the 9:00am job would otherwise miss it.
+
+Reminders go to a single shared SNS topic, so every confirmed subscriber receives a reminder for every assignment. Emails arrive from the sender name "Assignment Tracker".
+
+## Repository layout
+
+The project lives in `cloudcomputing/CloudAssignmentTracker/`. All paths and commands in this README are relative to that folder.
+
+| Path | Contents |
 |---|---|
-| UI changes | `Frontend/` |
-| API or validation changes | `AssignmentController.java` / `AssignmentService.java` |
-| Database changes | `setup-database.sql` |
-| VM or networking changes | `Vagrantfile` |
-| Frontend serving or `/api/` proxy changes | `test-website.conf` |
-    
+| `Backend/` | Spring Boot API, with the Maven wrapper |
+| `Frontend/` | `index.html`, `app.js` and `style.css` |
+| `terraform/` | All AWS infrastructure: VPC, subnets, security groups, EC2, RDS and SNS |
+| `scripts/check-deployment.sh` | End-to-end check of a deployed app |
+| `setup-database.sql` | Optional sample data for a local database |
+
+## Deploying to AWS
+
+### Prerequisites
 
 
-## 2. Architecture Overview
 
-### 2.1 What Each VM Does
- 
-| VM          | IP             | Purpose                                               | Port          |
-| ----------- | -------------- | ----------------------------------------------------- | ------------- |
-| `webserver` | `192.168.2.11` | Nginx - serves the frontend and forwards API requests | `8080 → 80`   |
-| `backend`   | `192.168.2.13` | Spring Boot API                                       | `8081 → 8080` |
-| `dbserver`  | `192.168.2.12` | PostgreSQL database                                   | Not exposed   |
- 
-Each VM has a separate role. The database is only accessible by the backend through the private network.
+### Steps
 
-### 2.2 How They Communicate
- 
-```text
-Browser
-   ↓
-webserver (Nginx)
-   ↓
-backend (Spring Boot)
-   ↓
-dbserver (PostgreSQL)
-```
-The response then travels back the same path but in reverse to reach the browser.
- 
-* The browser only communicates with the `webserver`.
-* Nginx serves the frontend and forwards `/api/` requests to the backend.
-* The backend communicates with the database.
-* The VMs communicate over the private `192.168.2.0/24` network.
-* The database is not directly accessible from the browser or host machine.
-The backend connects to PostgreSQL through an SSH tunnel. The `dbserver` creates an SSH key during setup, which the backend uses to securely connect to the database.
 
-### 2.3 Tools used
- 
-* **Vagrant** - sets up and manages all three VMs.
-* **VirtualBox** - runs the VMs.
-* **Nginx** - serves the frontend and forwards API requests.
-* **Maven** - builds the Spring Boot backend (into a `.jar` file).
-* **PostgreSQL** - database used to store the application data.
-  
----
+### Redeploying after a code change
 
-# 3. Setup Requirements
 
-| Tool | Version used | Notes |
+
+### Verifying the deployment
+
+
+### Tearing down
+
+
+
+## Running the backend locally
+
+### Prerequisites
+
+- Java 17 or later
+- PostgreSQL running locally, with a database for this project
+- No Maven install is needed; the wrapper in `Backend/` is used
+
+### Configuration
+
+The backend reads its settings from environment variables:
+
+| Variable | Default | Notes |
 |---|---|---|
-| Host OS | Windows 10/11 | Should also work on macOS/Linux with VirtualBox |
-| VirtualBox | 7.2.16 | Runs the three VMs |
-| Vagrant | 2.4.9 | Sets up and manages the VMs |
-| Guest box | `ubuntu/jammy64` (Ubuntu 22.04) | Used for all three VMs |
-| Backend runtime (in-VM) | OpenJDK 17 + Maven | Installed automatically — no need to install Java locally |
-| Git | Any recent version | To clone the repo |
+| `DB_HOST` | `localhost` | |
+| `DB_NAME` | `cosc349` | |
+| `DB_USERNAME` | `postgres` | |
+| `DB_PASSWORD` | `password` | |
+| `SNS_TOPIC_ARN` | none | Required. The app will not start without it. |
 
-**Before you start deployment, ensure you have the following:** 
-- VirtualBox and Vagrant installed
-- Virtualisation turned on in BIOS/UEFI (needed for VirtualBox on Windows)
-- At least ~4 GB free RAM and a few GB free disk space
-- A stable internet connection for the first setup (to download the Ubuntu box and Maven dependencies)
+`SNS_TOPIC_ARN` has no default. To work on the assignment features without AWS, set it to any placeholder value:
 
-# 4. How To Run
-Although it's easy to simply boot the VM's with a simple 'vagrant up', attention should be paid to making sure you're starting from a clean environment to avoid unecessary stress and debugging. 
+```powershell
+$env:SNS_TOPIC_ARN = "arn:aws:sns:us-east-1:000000000000:local"
+```
 
-Confirm you're starting from a clean slate. These commands check for leftover VMs or processes from this project or others, that might still be running or taking up resources. If anything shows up unexpectedly, you can halt and destroy it now to free up resources and prevent conflicts before starting.
-- Get-Process | Where-Object { $_.ProcessName -match "ruby|vagrant|VBoxHeadless" } (Checks entire system)
-- vagrant global-status --prune (Checks within vagrant)
+With a placeholder, assignments still save normally, but no emails are sent and the reminder signup returns an error. To test reminders locally, use the real topic ARN and have AWS credentials configured.
 
-Confirm your system isn't holding onto an old SSH identity. This is for reasons listed in the destroy cleanly section. It provides true reproducibility if another person wanted to replicate our VM.
-- Test-Path .\tunnel_keys
-- If this returns True and you want a fresh SSH identity rather than reusing a previous session's key, delete it: `Remove-Item -Recurse -Force .\tunnel_keys`
+The tables are created automatically on startup. `setup-database.sql` loads sample assignments, and it clears the `assignments` table first.
 
-Bring up the VMs. This is the actual startup command, everything above is just good practice to make sure you're starting from a clean slate, and can be skipped if you're confident nothing's left over. This command alone handles the entire environment: no manual setup on the VMs is needed, it provisions and starts everything automatically.
-- vagrant up
+### Starting the app
 
-Verify all three VM's are running. Alternatively you can check for dbserver, backendserver and frontendserver in Virtual Box.
-- vagrant status
+Run the one-time setup from the `Backend` folder:
+
+```powershell
+.\setup.ps1
+```
+
+This registers a global Git alias, so the backend can then be started from any folder in the repo:
+
+```powershell
+git run
+```
+
+The API starts on `http://localhost:8080`. The alias runs `mvnw.cmd spring-boot:run` in `Backend/`.
+
+The frontend calls the API on relative `/api/...` paths, so opening `index.html` directly will not reach the backend. It needs a web server that proxies `/api/` to port 8080, as Nginx does in the deployment.
+
+## API reference
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/assignments` | List all assignments, soonest due date first |
+| `GET` | `/api/assignments/{id}` | Get one assignment |
+| `POST` | `/api/assignments` | Create an assignment |
+| `PUT` | `/api/assignments/{id}` | Update an assignment |
+| `DELETE` | `/api/assignments/{id}` | Delete an assignment |
+| `POST` | `/api/notifications/subscribe` | Subscribe an email address to reminders |
+
+Assignment body:
+
+```json
+{
+  "title": "COSC349 Assignment 2",
+  "description": "Cloud Computing",
+  "dueDate": "2026-10-05",
+  "status": "PENDING"
+}
+```
+
+Subscribe body:
+
+```json
+{ "email": "you@example.com" }
+```
+
+## Troubleshooting
+
+### Deployment
 
 
-# 5. How To Destroy Cleanly
-Destroying is very important for maintaining a clean environment and ensuring setup runs smoothly. Once finished using virtual machines, run these commands:
+### App
 
-Destroy all virtual machines
-- vagrant destroy -f
+**No reminder email arrives.**
+Check that the subscription was confirmed from the AWS confirmation email, and check the spam folder. Reminders are only sent for assignments due today or tomorrow.
 
-Delete the shared tunnel key from the host. Because dbserver writes the SSH tunnel keypair to a file on the host instead of VM-local storage, `vagrant destroy` never removes it. This affects reproducibility: one person could
-end up reusing the same SSH key/environment across every rebuild, which can hide configuration issues that a truly fresh setup would expose. If someone else tries to replicate the work, they'd be starting from an environment that's effectively been built up over multiple sessions, rather than a genuinely clean one.
-- Remove-Item -Recurse -Force .\tunnel_keys
+**`.\mvnw.cmd : The term '.\mvnw.cmd' is not recognized...`**
+The `git run` alias was registered with the wrong path. Re-run `.\setup.ps1` from inside `Backend`. You can check the stored path with:
 
-Confirm the ports were released. If not confirmed, a zombie process will silently hold onto the port. This means upon next startup one of the servers may fail to bind its port and the whole environment fails to start. This was an issue we ran into multiple times, so is important to check.
-- Get-NetTCPConnection -LocalPort 2210,8080,8081 -ErrorAction SilentlyContinue
-
-Check for orphaned processes. This confirms vagrant destroy -f happened cleanly. Otherwise, there will be an old VM running, causing port conflicts, resource issues and lock errors. 
-- Get-Process | Where-Object { $_.ProcessName -match "ruby|vagrant|VBoxHeadless" }
-
-Prune Vagrant's global index. Sometimes a VM gets destroyed or removed, but Vagrant's own index still has a leftover ghost entry for it, since the index isn't always updated cleanly. This can cause confusion or conflicts when checking machine status later. Running this command refreshes Vagrant's index so it only reflects machines that actually still exist.
-- vagrant global-status --prune
-
-Finally as a sanity check, VirtualBox Manager should confirm 
-cloudassignmenttracker_dbserver_,
-cloudassignmenttracker_backend_,
-cloudassignmenttracker_webserver_,
-are gone from the VM list, and check File → Host Network Manager to confirm there are no orphaned 192.168.2.x host-only adapters. Running `vagrant global-status` should no longer show entries for webserver, backend, or dbserver from this project (it may still list VMs from other, unrelated Vagrant projects on the machine).
-
-
-
+```powershell
+git config --get alias.run
+```
